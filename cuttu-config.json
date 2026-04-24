@@ -2,7 +2,7 @@
   "app_id": "tshirt-print-cropper",
   "licenses": [
     { "key": "HALOO-2026-0424-0001-XXXXXX", "mac": "11" },
-    { "key": "HALOO-2026-0424-0002-DJLHSV", "mac": "" },
+    { "key": "HALOO-2026-0424-0002-DJLHSV", "mac": "00:E2:69:A9:C1:35" },
     { "key": "HALOO-2026-0424-0003-DJKSLB", "mac": "" },
     { "key": "HALOO-2026-0424-0004-UIEVBF", "mac": "" },
     { "key": "HALOO-2026-0424-0005-DSAUIJ", "mac": "" },
