@@ -1,1 +1,7 @@
-
+{
+  "app_id": "tshirt-print-cropper",
+  "licenses": [
+    { "key": "HALOO-2026-0001", "mac": "" },
+    { "key": "HALOO-2026-0002", "mac": "AA:BB:CC:DD:EE:FF" }
+  ]
+}
