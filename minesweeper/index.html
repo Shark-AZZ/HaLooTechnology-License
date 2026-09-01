@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>扫雷游戏</title>
+  <style>
+    :root {
+      --bg: #f5f7fb;
+      --panel: #ffffff;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --line: #d8dee9;
+      --cell: #eef2f7;
+      --cell-open: #ffffff;
+      --accent: #2563eb;
+      --danger: #dc2626;
+      --success: #16a34a;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Microsoft YaHei", system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .app {
+      width: min(96vw, 920px);
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      box-shadow: 0 18px 50px rgba(31, 41, 55, 0.12);
+      overflow: hidden;
+    }
+
+    .topbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      padding: 16px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .title {
+      font-size: 22px;
+      font-weight: 700;
+      margin-right: auto;
+    }
+
+    select, button, input {
+      height: 38px;
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      background: #fff;
+      color: var(--text);
+      font-size: 14px;
+      padding: 0 12px;
+    }
+
+    button {
+      cursor: pointer;
+      transition: transform .08s ease, border-color .15s ease;
+    }
+
+    button:hover { border-color: #9aa6b2; }
+    button:active { transform: scale(.98); }
+
+    .primary {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(110px, 1fr));
+      gap: 10px;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .stat {
+      background: #f8fafc;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 10px 12px;
+    }
+
+    .stat-label {
+      color: var(--muted);
+      font-size: 12px;
+      margin-bottom: 4px;
+    }
+
+    .stat-value {
+      font-size: 20px;
+      font-weight: 700;
+    }
+
+    .game-wrap {
+      overflow: auto;
+      padding: 18px;
+      min-height: 260px;
+    }
+
+    .board {
+      display: grid;
+      gap: 2px;
+      width: max-content;
+      margin: 0 auto;
+      user-select: none;
+      touch-action: manipulation;
+    }
+
+    .cell {
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid #cbd5e1;
+      border-radius: 5px;
+      background: var(--cell);
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .cell:hover { filter: brightness(.98); }
+    .cell.open { background: var(--cell-open); cursor: default; }
+    .cell.mine { background: #fee2e2; color: var(--danger); }
+    .cell.flag { color: var(--danger); }
+
+    .n1 { color: #2563eb; }
+    .n2 { color: #15803d; }
+    .n3 { color: #dc2626; }
+    .n4 { color: #7c3aed; }
+    .n5 { color: #9a3412; }
+    .n6 { color: #0891b2; }
+    .n7 { color: #111827; }
+    .n8 { color: #475569; }
+
+    .message {
+      min-height: 24px;
+      padding: 0 16px 16px;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    .message.win { color: var(--success); font-weight: 700; }
+    .message.lose { color: var(--danger); font-weight: 700; }
+
+    @media (max-width: 640px) {
+      body { padding: 8px; align-items: flex-start; }
+      .app { width: 100%; border-radius: 12px; }
+      .title { width: 100%; margin-bottom: 4px; }
+      .stats { grid-template-columns: 1fr 1fr 1fr; }
+      .cell { width: 28px; height: 28px; font-size: 13px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <section class="topbar">
+      <div class="title">扫雷游戏</div>
+      <select id="difficulty" aria-label="难度">
+        <option value="easy">初级 9×9 / 10雷</option>
+        <option value="medium">中级 16×16 / 40雷</option>
+        <option value="hard">高级 16×30 / 99雷</option>
+      </select>
+      <button id="restartBtn" class="primary">重新开始</button>
+    </section>
+
+    <section class="stats">
+      <div class="stat">
+        <div class="stat-label">剩余雷数</div>
+        <div class="stat-value" id="mineCount">10</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">时间</div>
+        <div class="stat-value"><span id="timer">0</span>s</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">状态</div>
+        <div class="stat-value" id="status">进行中</div>
+      </div>
+    </section>
+
+    <section class="game-wrap">
+      <div id="board" class="board"></div>
+    </section>
+
+    <div id="message" class="message">左键翻开，右键插旗</div>
+  </main>
+
+  <script>
+    const PRESETS = {
+      easy: { rows: 9, cols: 9, mines: 10 },
+      medium: { rows: 16, cols: 16, mines: 40 },
+      hard: { rows: 16, cols: 30, mines: 99 }
+    };
+
+    let state = null;
+    let timerHandle = null;
+
+    const boardEl = document.getElementById('board');
+    const mineCountEl = document.getElementById('mineCount');
+    const timerEl = document.getElementById('timer');
+    const statusEl = document.getElementById('status');
+    const messageEl = document.getElementById('message');
+    const difficultyEl = document.getElementById('difficulty');
+    const restartBtn = document.getElementById('restartBtn');
+
+    // 创建新游戏状态，由重新开始和难度切换流程调用，负责初始化棋盘并重置计时与显示
+    function newGame() {
+      stopTimer();
+      const preset = PRESETS[difficultyEl.value];
+      state = {
+        rows: preset.rows,
+        cols: preset.cols,
+        mines: preset.mines,
+        started: false,
+        ended: false,
+        elapsed: 0,
+        opened: 0,
+        flags: 0,
+        cells: []
+      };
+      createCells();
+      renderBoard();
+      updateStats();
+      messageEl.textContent = '左键翻开，右键插旗';
+      messageEl.className = 'message';
+    }
+
+    // 创建基础单元格数据，由newGame调用，生成未布雷棋盘并为后续首次点击布雷提供容器
+    function createCells() {
+      state.cells = Array.from({ length: state.rows }, (_, row) =>
+        Array.from({ length: state.cols }, (_, col) => ({
+          row,
+          col,
+          mine: false,
+          open: false,
+          flag: false,
+          around: 0
+        }))
+      );
+    }
+
+    // 首次点击后随机布雷，由openCell调用，避开首次点击位置并计算周围雷数
+    function placeMines(safeRow, safeCol) {
+      const pool = [];
+      for (let row = 0; row < state.rows; row++) {
+        for (let col = 0; col < state.cols; col++) {
+          if (row !== safeRow || col !== safeCol) pool.push([row, col]);
+        }
+      }
+      for (let i = pool.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [pool[i], pool[j]] = [pool[j], pool[i]];
+      }
+      for (let i = 0; i < state.mines; i++) {
+        const [row, col] = pool[i];
+        state.cells[row][col].mine = true;
+      }
+      calculateNumbers();
+    }
+
+    // 计算所有非雷格的相邻雷数，由placeMines调用，为翻格数字显示和连锁展开提供数据
+    function calculateNumbers() {
+      for (let row = 0; row < state.rows; row++) {
+        for (let col = 0; col < state.cols; col++) {
+          const cell = state.cells[row][col];
+          if (cell.mine) continue;
+          cell.around = getNeighbors(row, col).filter(item => item.mine).length;
+        }
+      }
+    }
+
+    // 获取指定格周围有效单元格，由布雷统计和空白连锁展开流程调用，过滤越界位置
+    function getNeighbors(row, col) {
+      const result = [];
+      for (let dr = -1; dr <= 1; dr++) {
+        for (let dc = -1; dc <= 1; dc++) {
+          if (dr === 0 && dc === 0) continue;
+          const nr = row + dr;
+          const nc = col + dc;
+          if (nr >= 0 && nr < state.rows && nc >= 0 && nc < state.cols) {
+            result.push(state.cells[nr][nc]);
+          }
+        }
+      }
+      return result;
+    }
+
+    // 翻开指定单元格，由鼠标点击和空白扩散流程调用，负责首次布雷、失败判断与连锁展开
+    function openCell(row, col) {
+      if (state.ended) return;
+      const cell = state.cells[row][col];
+      if (cell.open || cell.flag) return;
+
+      if (!state.started) {
+        state.started = true;
+        placeMines(row, col);
+        startTimer();
+      }
+
+      cell.open = true;
+      state.opened++;
+
+      if (cell.mine) {
+        endGame(false);
+        return;
+      }
+
+      if (cell.around === 0) {
+        getNeighbors(row, col).forEach(next => {
+          if (!next.open && !next.flag) openCell(next.row, next.col);
+        });
+      }
+
+      if (state.opened === state.rows * state.cols - state.mines) {
+        endGame(true);
+        return;
+      }
+
+      renderBoard();
+      updateStats();
+    }
+
+    // 切换旗标状态，由右键操作调用，限制旗标数量并更新剩余雷数显示
+    function toggleFlag(row, col) {
+      if (state.ended) return;
+      const cell = state.cells[row][col];
+      if (cell.open) return;
+      if (!cell.flag && state.flags >= state.mines) return;
+      cell.flag = !cell.flag;
+      state.flags += cell.flag ? 1 : -1;
+      renderBoard();
+      updateStats();
+    }
+
+    // 结束当前游戏，由翻格流程调用，展示全部地雷并停止计时，区分胜利和失败状态
+    function endGame(win) {
+      state.ended = true;
+      stopTimer();
+      if (!win) {
+        state.cells.flat().forEach(cell => {
+          if (cell.mine) cell.open = true;
+        });
+        statusEl.textContent = '失败';
+        messageEl.textContent = '踩到雷了，点击“重新开始”再来一局';
+        messageEl.className = 'message lose';
+      } else {
+        state.cells.flat().forEach(cell => {
+          if (cell.mine) cell.flag = true;
+        });
+        state.flags = state.mines;
+        statusEl.textContent = '胜利';
+        messageEl.textContent = '完成扫雷';
+        messageEl.className = 'message win';
+      }
+      renderBoard();
+      updateStats();
+    }
+
+    // 启动计时器，由首次翻格流程调用，每秒刷新游戏耗时并避免重复创建计时器
+    function startTimer() {
+      if (timerHandle) return;
+      timerHandle = setInterval(() => {
+        state.elapsed++;
+        timerEl.textContent = state.elapsed;
+      }, 1000);
+    }
+
+    // 停止当前计时器，由重新开始和结束游戏流程调用，避免旧计时器继续累加
+    function stopTimer() {
+      if (timerHandle) {
+        clearInterval(timerHandle);
+        timerHandle = null;
+      }
+    }
+
+    // 渲染完整棋盘，由新游戏和每次格子状态变化后调用，把状态同步到页面单元格
+    function renderBoard() {
+      boardEl.innerHTML = '';
+      boardEl.style.gridTemplateColumns = `repeat(${state.cols}, 32px)`;
+
+      state.cells.flat().forEach(cell => {
+        const el = document.createElement('div');
+        el.className = 'cell';
+        el.dataset.row = cell.row;
+        el.dataset.col = cell.col;
+
+        if (cell.open) {
+          el.classList.add('open');
+          if (cell.mine) {
+            el.classList.add('mine');
+            el.textContent = '💣';
+          } else if (cell.around > 0) {
+            el.classList.add(`n${cell.around}`);
+            el.textContent = cell.around;
+          }
+        } else if (cell.flag) {
+          el.classList.add('flag');
+          el.textContent = '🚩';
+        }
+
+        boardEl.appendChild(el);
+      });
+    }
+
+    // 更新顶部统计信息，由新游戏和格子操作流程调用，同步剩余雷数、时间和当前状态
+    function updateStats() {
+      mineCountEl.textContent = state.mines - state.flags;
+      timerEl.textContent = state.elapsed;
+      if (!state.ended) statusEl.textContent = state.started ? '进行中' : '待开始';
+    }
+
+    // 处理棋盘左键点击，由board事件委托调用，定位目标格并执行翻格流程
+    function handleBoardClick(event) {
+      const target = event.target.closest('.cell');
+      if (!target) return;
+      openCell(Number(target.dataset.row), Number(target.dataset.col));
+    }
+
+    // 处理棋盘右键操作，由board右键事件委托调用，阻止浏览器菜单并执行插旗流程
+    function handleBoardContextMenu(event) {
+      const target = event.target.closest('.cell');
+      if (!target) return;
+      event.preventDefault();
+      toggleFlag(Number(target.dataset.row), Number(target.dataset.col));
+    }
+
+    boardEl.addEventListener('click', handleBoardClick);
+    boardEl.addEventListener('contextmenu', handleBoardContextMenu);
+    restartBtn.addEventListener('click', newGame);
+    difficultyEl.addEventListener('change', newGame);
+
+    newGame();
+  </script>
+</body>
+</html>
